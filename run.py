@@ -28,7 +28,7 @@ class Hashable:
     def __repr__(self):
         return str(self)
 
-
+BOARD_SIZE = 10
 # ----------------------------------------- Propositions ----------------------------------------- 
 @proposition(E)
 class Boat(Hashable):
@@ -52,15 +52,28 @@ class Boat(Hashable):
     
     def orientation(self):
         return self.orientation
+    
+@proposition(E)
+class Game(Hashable):
+    def __init__(self, boats:tuple):
+        self.boats = boats
+
+    def __str__(self):
+        game = ""
+        for boat in self.boats:
+            game+=(f"({boat}, ")
+        game.rstrip(", ")
+        game+=")"
+        return f"{game}"
 
 
 # Create the propositions
-def create_coords(length, orientation):
+def create_coords(length, orientation, board_size):
     boats = []
 
     if orientation == "vertical":
-        for start in range(11-length):
-            for r in range(10):
+        for start in range((board_size+1)-length):
+            for r in range(board_size):
                 temp_coords = []
                 for c in range(length):
                     temp_coords.append((r,c+start))
@@ -68,8 +81,8 @@ def create_coords(length, orientation):
                 boats.append(Boat(coords, length, orientation))
 
     elif orientation == "horizontal":
-        for start in range(11-length):
-            for r in range(10):
+        for start in range((board_size+1)-length):
+            for r in range(board_size):
                 temp_coords = []
                 for c in range(length):
                     temp_coords.append((r,c+start))
@@ -78,25 +91,38 @@ def create_coords(length, orientation):
     
     return boats
 
-all_boats = []
-all_boats += create_coords(5, "horizontal")
-all_boats += create_coords(5, "vertical")
-all_boats += create_coords(4, "horizontal")
-all_boats += create_coords(4, "vertical")
-all_boats += create_coords(3, "horizontal")
-all_boats += create_coords(3, "vertical")
-all_boats += create_coords(2, "horizontal")
-all_boats += create_coords(2, "vertical")
+# Boats by size and orientation
+all_boats_5_horizontal = create_coords(5, "horizontal", BOARD_SIZE)
+all_boats_5_vertical = create_coords(5, "vertical", BOARD_SIZE)
+all_boats_4_horizontal = create_coords(4, "horizontal", BOARD_SIZE)
+all_boats_4_vertical = create_coords(4, "vertical", BOARD_SIZE)
+all_boats_3_horizontal = create_coords(3, "horizontal", BOARD_SIZE)
+all_boats_3_vertical = create_coords(3, "vertical", BOARD_SIZE)
+# all_boats += create_coords(2, "horizontal", BOARD_SIZE)
+# all_boats += create_coords(2, "vertical", BOARD_SIZE)
 
-for boat in all_boats:
-    print(boat)
+# Boats by size
+all_boats_5 = all_boats_5_horizontal + all_boats_5_vertical
+all_boats_4 = all_boats_4_horizontal + all_boats_4_vertical
+all_boats_3 = all_boats_3_horizontal + all_boats_3_vertical
+
+# All the boats
+all_boats = all_boats_5 + all_boats_4 + all_boats_3
+
+# Mini-Game will have one boat of lengths 5, 4, and 3
+all_games = []
+
+# there is only one boat of length 5,4, and 3 in each game
+for boat1 in all_boats_5:
+    for boat2 in all_boats_4:
+        for boat3 in all_boats_3:
+            all_games.append(Game(tuple(boat1,boat2,boat3)))
+
 # ----------------------------------------- Propositions ----------------------------------------- 
-
 def build_theory():
-    # there is only one boat of length 5,4,2 and two of three (unique)
-
     # boats can not be placed next to each other 
-
+    for game in all_games:
+        E.add_constraint()
     # 
 
     return E
