@@ -43,15 +43,15 @@ class Boat(Hashable):
             boat_coords+=(f"({coord[0]},{coord[1]}),")
         boat_coords.rstrip(",")
         return f"{boat_coords} + {self.length} + {self.orientation}"
-
-@proposition(E)
-class Attached(Hashable):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def __str__(self):
-        return f"({self.x} (-) {self.y})"
+    
+    def coords(self):
+        return self.coords
+    
+    def length(self):
+        return self.length
+    
+    def orientation(self):
+        return self.orientation
 
 
 # Create the propositions
@@ -93,9 +93,7 @@ for boat in all_boats:
 # ----------------------------------------- Propositions ----------------------------------------- 
 
 def build_theory():
-    
     # there is only one boat of length 5,4,2 and two of three (unique)
-    
 
     # boats can not be placed next to each other 
 
