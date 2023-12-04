@@ -56,3 +56,9 @@ Finally, if you are in a folder with a bunch of spaces in the absolute path, the
 ```
 docker run -it -v "%cd%":/PROJECT cisc204
 ```
+
+After the root is running, make sure seaborn is installed by pip installing it in the root of the image. 
+
+```
+pip3 install seaborn
+```

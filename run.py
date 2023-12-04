@@ -1,6 +1,7 @@
 from bauhaus import Encoding, proposition, constraint, Or, And
 from bauhaus.utils import count_solutions, likelihood
 import random
+import seaborn
 
 # These two lines make sure a faster SAT solver is used.
 from nnf import config
@@ -29,7 +30,7 @@ class Hashable:
     def __repr__(self):
         return str(self)
 
-BOARD_SIZE = 10
+BOARD_SIZE = 7
 VALID = True
 # ----------------------------------------- Propositions ----------------------------------------- 
 @proposition(E)
@@ -68,22 +69,13 @@ class Guess(Hashable):
         return f"{self.coords}"
     
 @proposition(E)
-class Touching(Hashable):
-    def __init__(self, boat1:Boat, boat2:Boat):
-        self.boat1 = boat1
-        self.boat2 = boat2
-
-    def __str__(self):
-        return f"({self.boat1} (-) {self.boat2})"
-    
-@proposition(E)
 class Around(Hashable):
     def __init__(self, boat1:Boat, boat2:Boat):
         self.boat1 = boat1
         self.boat2 = boat2
 
     def __str__(self):
-        return f"({self.boat1} (+) {self.boat2})"
+        return f"({self.boat1} (-) {self.boat2})"
 
 @proposition(E)
 class Property(Hashable):
@@ -142,7 +134,9 @@ all_games = []
 for boat1 in all_boats_5:
     for boat2 in all_boats_4:
         for boat3 in all_boats_3:
-            all_games.append(Game(tuple(boat1,boat2,boat3)))
+            all_games.append(Game(tuple([boat1,boat2,boat3])))
+    
+print(len(all_games))
         
 def print_board(sol, reveal=False):
     # if reveal == true, show boats too (if not hit ofc) ⛵
@@ -166,34 +160,45 @@ def print_board(sol, reveal=False):
 
 # ----------------------------------------- Propositions ----------------------------------------- 
 def build_theory():
-    # Define when a boat is touching (on top)
-    for i in range(len(all_boats)):
-        boat1 = all_boats[i]
-        for j in range(i+1, len(all_boats)):
-            boat2 = all_boats[j]
-            for coord1 in boat1.coords:
-                for coord2 in boat2.coords:
-                    if coord1 == coord2:
-                        E.add_constraint(Touching(boat1,boat2) & Touching(boat2, boat1))
-    
     # Define when a boat is around
     for i in range(len(all_boats)):
         boat1 = all_boats[i]
         for j in range(i+1, len(all_boats)):
             boat2 = all_boats[j]
             # look at all the coords in the first board
-            for coord1 in boat1.coords:
-                # check around depending on orientation (slightly more efficient)
-                if boat1.orientation == "vertical":
-                    # ************************ 
-                    E.add_constraint(Around(boat1,boat2) & Around(boat2, boat1))
-                if boat1.orientation == "horizontal":
-                    # ************************ 
-                    E.add_constraint(Around(boat1,boat2) & Around(boat2, boat1))
+            if boat1.orientation == "vertical":
+                # for every coord in boat1 if any of the following are in boat2:
+                # check around first coord (not the bottom side)
+                boat1.coords[0]
+                # check left and right of the middle coords
+                for coord in boat1.coords[1:-1]:
+                    ...
+                # check around last coord (not the top side)
+                boat1.coords[-1]
+                # once found decalre that they are around and break ... else they are not around
+                ...
 
-    # boats can not be placed next to each other or ontop
-    for game in all_games:
-        E.add_constraint()
+
+            elif boat1.orientation == "horizontal":
+                # for every coord in boat1 if any of the following are in boat2:
+                # check around first coord (not the right side)
+                boat1.coords[0]
+                # check up and down of the middle coords
+                for coord in boat1.coords[1:-1]:
+                    ...
+                # check around last coord (not the left side)
+                boat1.coords[-1]
+                # once found decalre that they are around and break ... else they are not around
+                ...
+        
+
+    # add a constraint that a game cannot exist where any of the three boats are around
+    for boat1 in all_boats_5:
+        for boat2 in all_boats_4:
+            for boat3 in all_boats_3:
+                
+                # anything is around -> not a valid game
+                E.add_constaint()
 
     # If a boat has been hit, then that implies there is something in cardinal direction (within the borders)
 
@@ -251,7 +256,7 @@ if __name__ == "__main__":
     T = build_theory()
     # Don't compile until you're finished adding all your constraints!
     T = T.compile()
-    play_game(T)
+    # play_game(T)
     # After compilation (and only after), you can check some of the properties
     # of your model:
     # print("\nSatisfiable: %s" % T.satisfiable())
