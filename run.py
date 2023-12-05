@@ -4,9 +4,9 @@ import random
 # import pprint
 # pp = pprint.PrettyPrinter(indent=4)
 
-import numpy as np 
-import seaborn as sn 
-import matplotlib.pyplot as plt 
+# import numpy as np 
+# import seaborn as sn 
+# import matplotlib.pyplot as plt 
 
 
 # These two lines make sure a faster SAT solver is used.
@@ -148,20 +148,20 @@ def build_theory():
                 possible = []
                 start = boat1.coords[0]
                 for i in range(start[0]-1, start[0]+1):
-                    for j in range (start[1]-1,start[1]):
+                    for j in range (start[1]-1,start[1]+2):
                         if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
                             possible.append((i,j))
 
                 # check left and right of the middle coords
                 for coord in boat1.coords[1:-1]:
-                    for i in range(coord[0]-1, coord[0]+1):
-                        if 0<=i <BOARD_SIZE:
+                    for i in range(coord[0]-1, coord[0]+2):
+                        if 0<= i <BOARD_SIZE:
                             possible.append((i,coord[1]))
 
                 # check around last coord (not the top side)
                 end = boat1.coords[-1]
-                for i in range(end[0]-1, end[0]+1):
-                    for j in range (end[1],end[1]+1):
+                for i in range(end[0], end[0]+2):
+                    for j in range (end[1]-1,end[1]+2):
                         if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
                             possible.append((i,j))
 
@@ -179,21 +179,21 @@ def build_theory():
                 # check around first coord (not the right side)
                 possible = []
                 start = boat1.coords[0]
-                for i in range(start[0]-1, start[0]):
+                for i in range(start[0]-1, start[0]+2):
                     for j in range (start[1]-1,start[1]+1):
                         if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
                             possible.append((i,j))
 
                 # check up and down of the middle coords
                 for coord in boat1.coords[1:-1]:
-                    for j in range (coord[1]-1,coord[1]+1):
+                    for j in range (coord[1]-1,coord[1]+2):
                         if 0<=j<BOARD_SIZE:
                             possible.append((coord[0],j))
 
                 # check around last coord (not the left side)
                 end = boat1.coords[-1]
-                for i in range(end[0], end[0]+1):
-                    for j in range (end[1]-1,end[1]+1):
+                for i in range(end[0]-1, end[0]+2):
+                    for j in range (end[1],end[1]+2):
                         if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
                             possible.append((i,j))
                 
@@ -201,6 +201,7 @@ def build_theory():
                 for coord in boat2.coords:
                     if coord in possible:
                         E.add_constraint(Around(boat1,boat2))
+                        E.add_constraint(Around(boat2,boat1))
                         break
         
 
@@ -217,10 +218,16 @@ def build_theory():
     # for boat in all_boats:
     #     # need to fix syntax on Around
     #     E.add_constraint(~boat >> ~Around(boat1,boat1))
-
-    # example_game() # Example game
     
     return E
+
+def initialize_board(sol):
+    board = [[0 for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+    for game in sol:
+        for boat in game.boats:
+            for coord in boat.coords:
+                board[coord[0]][coord[1]]+=1
+    return board
 
 def print_board(sol, reveal=False):
     # if reveal == true, show boats too (if not hit ofc) ⛵
@@ -229,14 +236,13 @@ def print_board(sol, reveal=False):
             coord = (row,col)
             # itterate through the props and find out what is the state at a given coord
             # if board[row][col] == '1':
-            #     print("🟢", end="")
+            #     print("🟢", end="")                
             # if board[row][col] == '2':
             #     print("❌", end="")
             # elif board[row][col] == '3':
             #     print("💥", end="")
             # else:
             #     print("⬛", end="")
-        print()
 
     if reveal:
         ...
@@ -270,8 +276,7 @@ def generate_guesses(guesses):
     return sorted(unique_guesses)
 
 # Similar to print graph in graph theory example
-def play_game(sol):
-    score = 0
+def play_game(sol, score):
 
     # define the possible guesses
 
@@ -282,8 +287,10 @@ def play_game(sol):
     # print probability density board - (needs to be adjusted)
     print_board(sol)
 
-    # if game is finished, exist and print score
-    print(score)
+    # if game is finished, exit and print score
+    print("Lower scores are better; your score is: " + score)
+    # else play the game but with the added constraint
+    # play_game(sol, score+1)
     
 def example_game():
     desired_boats = {
@@ -312,14 +319,16 @@ if __name__ == "__main__":
     satified = T.solve()
     # n = random.randint(0,len(satified))
     
-    # possible_games = []
-    # for boat1 in all_boats_5:
-    #     for boat2 in all_boats_4:
-    #         for boat3 in all_boats_3:
-    #             if satified[Game(boat1,boat2,boat3)]:
-    #                 possible_games.append(Game(boat1,boat2,boat3))
+    possible_games = []
+    for boat1 in all_boats_5:
+        for boat2 in all_boats_4:
+            for boat3 in all_boats_3:
+                if satified[Game((boat1,boat2,boat3))]:
+                    possible_games.append(Game((boat1,boat2,boat3)))
     
-    # play_game(possible_games)
+    possibility_board = initialize_board(possible_games)
+    for line in possibility_board:
+        print(line)
 
     # print("\nVariable likelihoods:")
     # for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
