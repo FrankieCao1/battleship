@@ -62,3 +62,9 @@ After the root is running, make sure seaborn is installed by pip installing it i
 ```
 pip3 install seaborn
 ```
+
+Then you can run the program using python3 run.py
+
+```
+python3 run.py
+```
