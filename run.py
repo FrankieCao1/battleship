@@ -1,8 +1,9 @@
 from bauhaus import Encoding, proposition, constraint, Or, And
 from bauhaus.utils import count_solutions, likelihood
 import random
-# import pprint
-# pp = pprint.PrettyPrinter(indent=4)
+
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 # import numpy as np 
 # import seaborn as sn 
@@ -37,7 +38,7 @@ class Hashable:
         return str(self)
 
 BOARD_SIZE = 6
-VALID = True
+
 # ----------------------------------------- Propositions ----------------------------------------- 
 @proposition(E)
 class Boat(Hashable):
@@ -68,6 +69,14 @@ class Game(Hashable):
 
 @proposition(E)
 class Guess(Hashable):
+    def __init__(self, coords:tuple):
+        self.coords = coords
+
+    def __str__(self):
+        return f"{self.coords}"
+    
+@proposition(E)
+class Hit(Hashable):
     def __init__(self, coords:tuple):
         self.coords = coords
 
@@ -139,7 +148,7 @@ def build_theory():
     # Define when a boat is around
     for i in range(len(all_boats)):
         boat1 = all_boats[i]
-        for j in range(i+1, len(all_boats)):
+        for j in range(len(all_boats)):
             boat2 = all_boats[j]
             # look at all the coords in the first board
             if boat1.orientation == "vertical":
@@ -147,23 +156,23 @@ def build_theory():
                 # check around first coord (not the bottom side)
                 possible = []
                 start = boat1.coords[0]
-                for i in range(start[0]-1, start[0]+1):
-                    for j in range (start[1]-1,start[1]+2):
-                        if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                            possible.append((i,j))
+                for j in range (start[1]-1,start[1]+2):
+                    i = start[0]-1
+                    if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
+                        possible.append((i,j))
 
                 # check left and right of the middle coords
-                for coord in boat1.coords[1:-1]:
+                for coord in boat1.coords:
                     for i in range(coord[0]-1, coord[0]+2):
                         if 0<= i <BOARD_SIZE:
                             possible.append((i,coord[1]))
 
                 # check around last coord (not the top side)
                 end = boat1.coords[-1]
-                for i in range(end[0], end[0]+2):
-                    for j in range (end[1]-1,end[1]+2):
-                        if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                            possible.append((i,j))
+                for j in range (end[1]-1,end[1]+2):
+                    i = end[0]+1
+                    if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
+                        possible.append((i,j))
 
                 # once found decalre that they are around and break
                 for coord in boat2.coords:
@@ -171,7 +180,6 @@ def build_theory():
                         E.add_constraint(Around(boat1,boat2))
                         E.add_constraint(Around(boat2,boat1))
                         break
-                
 
 
             elif boat1.orientation == "horizontal":
@@ -180,12 +188,12 @@ def build_theory():
                 possible = []
                 start = boat1.coords[0]
                 for i in range(start[0]-1, start[0]+2):
-                    for j in range (start[1]-1,start[1]+1):
-                        if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                            possible.append((i,j))
+                    j = start[1]-1
+                    if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
+                        possible.append((i,j))
 
                 # check up and down of the middle coords
-                for coord in boat1.coords[1:-1]:
+                for coord in boat1.coords:
                     for j in range (coord[1]-1,coord[1]+2):
                         if 0<=j<BOARD_SIZE:
                             possible.append((coord[0],j))
@@ -193,9 +201,9 @@ def build_theory():
                 # check around last coord (not the left side)
                 end = boat1.coords[-1]
                 for i in range(end[0]-1, end[0]+2):
-                    for j in range (end[1],end[1]+2):
-                        if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                            possible.append((i,j))
+                    j = end[1]+1
+                    if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
+                        possible.append((i,j))
                 
                 # once found decalre that they are around and break ... else they are not around
                 for coord in boat2.coords:
@@ -221,6 +229,11 @@ def build_theory():
     
     return E
 
+# ----------------------------------------- End of Propositions ----------------------------------------- 
+
+
+
+# ----------------------------------------- Printing Mechanics ----------------------------------------- 
 def initialize_board(sol):
     board = [[0 for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
     for game in sol:
@@ -229,40 +242,49 @@ def initialize_board(sol):
                 board[coord[0]][coord[1]]+=1
     return board
 
-def print_board(sol, reveal=False):
-    # if reveal == true, show boats too (if not hit ofc) ⛵
+def print_board(sol):
     for row in range(BOARD_SIZE):
         for col in range(BOARD_SIZE):
-            coord = (row,col)
-            # itterate through the props and find out what is the state at a given coord
-            # if board[row][col] == '1':
-            #     print("🟢", end="")                
-            # if board[row][col] == '2':
-            #     print("❌", end="")
-            # elif board[row][col] == '3':
-            #     print("💥", end="")
-            # else:
-            #     print("⬛", end="")
+            coord = (row,col)           
+            if Hit(coord):
+                print("💥", end=" ")
+            elif Guess(coord):
+                print("❌", end=" ")
+            else:
+                print("⬛", end=" ")
+# ----------------------------------------- End of Printing Mechanics ----------------------------------------- 
 
-    if reveal:
-        ...
-        # data = np.random.randint(low=1, 
-        #                         high=100, 
-        #                         size=(10, 10)) 
-        
-        # # setting the parameter values 
-        # annot = True
-        
-        # # plotting the heatmap 
-        # hm = sn.heatmap(data=data, 
-        #                 annot=annot) 
-        
-        # # displaying the plotted heatmap 
-        # plt.show() 
 
+
+# ----------------------------------------- Game Mechanics ----------------------------------------- 
+
+# Similar to print graph in graph theory example
+def play_game(sol, score, game):
+
+    # define the possible guesses
+    print("Enter a guess as a tuple (i.e. \"(x,y)\", where the top left is (0,0).")
+    person_guess = input("please, there's no error handling: " )
+    if 0<= person_guess[0]<BOARD_SIZE and 0<= person_guess[1]<BOARD_SIZE:
+        # check if that place has already been guessed
+        while sol[person_guess[1]][person_guess[0]] is 0:
+                person_guess = input("Please select a coord that is has not been selected yet: " )
+        row = person_guess[1]
+        col = person_guess[0]
+        # this syntax is definately wrong
+        E.add_constraint(Guess((row,col)))
     
-# for each coord: (satisfiable)/(total possiblites for that coord), remove non-satisfibale to figure out the probability map
-# using that map recommend a value
+    # if there is a boat at the coord >> hit
+    
+    # print game board
+    print_board(sol)
+
+    # print probability density board
+    # initialize_board(sol)
+
+    # if game is finished, exit and print score
+    print("Lower scores are better; your score is: " + score)
+    # else play the game but with the added constraint
+    # play_game(sol, score+1)
 
 def generate_guesses(guesses):
     # generate at most n guesses
@@ -275,35 +297,24 @@ def generate_guesses(guesses):
 
     return sorted(unique_guesses)
 
-# Similar to print graph in graph theory example
-def play_game(sol, score):
-
-    # define the possible guesses
-
-
-    # print game board - (needs to be adjusted)
-    print_board(sol)
-
-    # print probability density board - (needs to be adjusted)
-    print_board(sol)
-
-    # if game is finished, exit and print score
-    print("Lower scores are better; your score is: " + score)
-    # else play the game but with the added constraint
-    # play_game(sol, score+1)
-    
-def example_game():
+def example_game(sol):
     desired_boats = {
         ((0,0), (0,1), (0,2), (0,3), (0,4)),
         ((2,0), (3,0), (4,0), (5,0)),
         ((5,3), (5,4), (5,5))
     }
-    desired_guesses = generate_guesses(20)
+    desired_guesses = generate_guesses(10)
 
-    ...
-    # E.add_constraint(Game(Boat[desired_boats[0]],Boat[desired_boats[1]],Boat[desired_boats[2]]))
-    # for guess in desired_guesses:
-    #     E.add_constraint(Guess(guess))
+    game = Game(Boat[desired_boats[0]],Boat[desired_boats[1]],Boat[desired_boats[2]])
+
+    # check if the coords of the boats overlap with the guesses >> hit
+
+
+    play_game(sol, 0, game)
+
+# ----------------------------------------- End of Game Mechanics ----------------------------------------- 
+
+# ----------------------------------------- Main ----------------------------------------- 
 
 if __name__ == "__main__":
 
@@ -318,17 +329,20 @@ if __name__ == "__main__":
     # pp.pprint("   Solution: %s" % T.solve())
     satified = T.solve()
     # n = random.randint(0,len(satified))
-    
     possible_games = []
     for boat1 in all_boats_5:
         for boat2 in all_boats_4:
             for boat3 in all_boats_3:
                 if satified[Game((boat1,boat2,boat3))]:
                     possible_games.append(Game((boat1,boat2,boat3)))
-    
+
     possibility_board = initialize_board(possible_games)
     for line in possibility_board:
-        print(line)
+        for val in line:
+            print(val, end="\t ")
+        print()
+    
+    # print(data)
 
     # print("\nVariable likelihoods:")
     # for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
@@ -337,6 +351,7 @@ if __name__ == "__main__":
     #     print(" %s: %.2f" % (vn, likelihood(T, v)))
     # print()
 
+# ----------------------------------------- End of Main ----------------------------------------- 
 
 """
     To do list
