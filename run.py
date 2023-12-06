@@ -143,6 +143,7 @@ for boat1 in all_boats_5:
         for boat3 in all_boats_3:
             all_games.append(Game(tuple([boat1,boat2,boat3])))
 
+
 # ----------------------------------------- Propositions ----------------------------------------- 
 def build_theory():
     # Define when a boat is around
@@ -237,13 +238,17 @@ def initialize_board(sol):
 def print_board(sol):
     for row in range(BOARD_SIZE):
         for col in range(BOARD_SIZE):
-            coord = (row,col)           
-            if Hit(coord):
-                print("💥", end=" ")
-            elif Guess(coord):
-                print("❌", end=" ")
-            else:
-                print("⬛", end=" ")
+            coord = (row,col)
+            try:
+                if sol[Hit(coord)]:
+                    print("x", end="\t ")
+            except KeyError:
+                try:
+                    if sol[Guess(coord)]:
+                        print("o", end="\t ")
+                except KeyError:
+                    print("-", end="\t ")
+        print()
 # ----------------------------------------- End of Printing Mechanics ----------------------------------------- 
 
 
@@ -251,13 +256,10 @@ def print_board(sol):
 # ----------------------------------------- Game Mechanics ----------------------------------------- 
 
 # Similar to print graph in graph theory example
-def play_game(satisfied, score, game):
-    possible_games = []
-    for boat1 in all_boats_5:
-        for boat2 in all_boats_4:
-            for boat3 in all_boats_3:
-                if satisfied[Game((boat1,boat2,boat3))]:
-                    possible_games.append(Game((boat1,boat2,boat3)))
+def play_game(possible_games, score, game):
+    for game in possible_games:
+        E.add_constraint(game)
+
     possibility_board = initialize_board(possible_games)
 
     # define the possible guesses
@@ -270,52 +272,52 @@ def play_game(satisfied, score, game):
             x = int(input("Please enter an x value: "))
             y = int(input("Please enter an y value: "))
         # this syntax is definately wrong
-        satisfied.add_constraint(Guess((x,y)))
+        E.add_constraint(Guess((x,y)))
     
     # if there is a boat at the coord >> hit (update sol)
     hit = False
     for boat in game.boats:
         for coord in boat.coords:
-            satisfied.add_constraint(Guess(coord) >> Hit(coord))
+            E.add_constraint(Guess(coord) >> Hit(coord))
             hit = True
     
-    if not hit:
-        for boat1 in all_boats_5:
-                for boat2 in all_boats_4:
-                    for boat3 in all_boats_3:
-                        if (x,y) in boat1.coords or (x,y) in boat2.coords or (x,y) in boat3.coords:
-                            satisfied.add_constraint(~Game((boat1,boat2,boat3)))
+    # Fix this
+    # for boat1 in all_boats_5:
+    #     for boat2 in all_boats_4:
+    #         for boat3 in all_boats_3:
+    #             if (x,y) in boat1.coords or (x,y) in boat2.coords or (x,y) in boat3.coords:
+    #                 E.add_constraint(~Game((boat1,boat2,boat3)))
     
     # check if the boat has been are destroyed (all coords hit)
     for boat in game.boats:
         hits = []
         for coord in boat.coords:
             hits.append(Hit(coord))
-        satisfied.add_constraint(And(hits) >> ~Boat(boat.coords))
+        E.add_constraint(And(hits) >> ~boat)
 
     # then remove the possiblity of anything around it
-    for boat in game.boats:
+    for boat1 in game.boats:
         if boat1.orientation == "vertical":
             possible = []
             start = boat1.coords[0]
             for j in range (start[1]-1,start[1]+2):
                 i = start[0]-1
                 if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                    possible.append(Guess(i,j))
+                    possible.append(Guess((i,j)))
 
             # check left and right of the middle coords
             for coord in boat1.coords:
                 for i in range(coord[0]-1, coord[0]+2):
                     if 0<= i <BOARD_SIZE:
-                        possible.append(Guess(i,coord[1]))
+                        possible.append(Guess((i,coord[1])))
 
             # check around last coord (not the top side)
             end = boat1.coords[-1]
             for j in range (end[1]-1,end[1]+2):
                 i = end[0]+1
                 if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                    possible.append(Guess(i,j))
-            satisfied.add_constraint(~Boat(boat.coords >> And(possible)))
+                    possible.append(Guess((i,j)))
+            E.add_constraint(~boat >> And(possible))
 
         elif boat1.orientation == "horizontal":
             # for every coord in boat1 if any of the following are in boat2:
@@ -325,24 +327,23 @@ def play_game(satisfied, score, game):
             for i in range(start[0]-1, start[0]+2):
                 j = start[1]-1
                 if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                    possible.append(Guess(i,j))
+                    possible.append(Guess((i,j)))
 
             # check up and down of the middle coords
             for coord in boat1.coords:
                 for j in range (coord[1]-1,coord[1]+2):
                     if 0<=j<BOARD_SIZE:
-                        possible.append(Guess(coord[0],j))
+                        possible.append(Guess((coord[0],j)))
 
             # check around last coord (not the left side)
             end = boat1.coords[-1]
             for i in range(end[0]-1, end[0]+2):
                 j = end[1]+1
                 if 0<=i< BOARD_SIZE and 0<=j<BOARD_SIZE:
-                    possible.append(Guess(i,j))
-            satisfied.add_constraint(~Boat(boat.coords >> And(possible)))
+                    possible.append(Guess((i,j)))
+            E.add_constraint(~boat >> And(possible))
 
-
-    satisfied = satisfied.compile().solve()
+    satisfied = E.compile().solve()
     temp = []
     for boat1 in all_boats_5:
         for boat2 in all_boats_4:
@@ -356,13 +357,13 @@ def play_game(satisfied, score, game):
         print()
 
     # print game board
-    print_board(game)
+    print_board(satisfied)
 
     # print probability density board
     # initialize_board(sol)
 
     # if game is finished, exit and print score
-    print("Lower scores are better; your score is: " + score)
+    print("Lower scores are better; your score is: " + str(score))
     # else play the game but with the added constraint
     # play_game(sol, score+1, game)
 
@@ -404,14 +405,8 @@ if __name__ == "__main__":
     
     # could pick a random game from possible_games **
     game = random.choice(possible_games)
-    # or ... example game
-    # desired_boats = {
-    #     ((0,0), (0,1), (0,2), (0,3), (0,4)),
-    #     ((2,0), (3,0), (4,0), (5,0)),
-    #     ((5,3), (5,4), (5,5))
-    # }
-    # game = Game(Boat[desired_boats[0]],Boat[desired_boats[1]],Boat[desired_boats[2]])
-    play_game(satisfied, 0, game)
+    print(game)
+    play_game(possible_games, 0, game)
     # print(data)
 
 # ----------------------------------------- End of Main ----------------------------------------- 
