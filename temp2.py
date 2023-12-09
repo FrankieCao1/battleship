@@ -1,10 +1,11 @@
+
 from bauhaus import Encoding, proposition, constraint, Or, And
 
 from bauhaus.utils import count_solutions, likelihood
 import string
 import random
-# import pprint
-# pp = pprint.PrettyPrinter(indent=4)
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 # import numpy as np 
 # import seaborn as sn 
@@ -75,25 +76,16 @@ class Game(Hashable):
 
 @proposition(E)
 class Guess(Hashable):
-    def __init__(self, coords: tuple, is_hit: bool):
-        self.coords = coords
-        self.is_hit = is_hit
-
-    def __str__(self):
-        return f"Guess({self.coords}, {'Hit' if self.is_hit else 'Miss'})"
-
-@proposition(E)
-class Hit(Hashable):
     def __init__(self, coords: tuple):
         self.coords = coords
 
     def __str__(self):
-        return f"Hit({self.coords})"
+        return f"Guess({self.coords})"
+
 
 # ----------------------------------------- Variables -----------------------------------------
 board_status = [[' ' for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 guesses = []
-hits = []
 # Mini-Game will have one boat of lengths 5, 4, and 3
 all_games = []
 # ----------------------------------------- Create all variations -----------------------------------------
@@ -170,9 +162,11 @@ def get_user_guess(board_status):
 
 
 def process_guess(game_board, player_board, x, y):
+    """
+    Check if the guess is a hit or a miss and update the player's board accordingly.
+    """
     if game_board[x][y] == 1:
         player_board[x][y] = 'H'  # Mark as hit on the player's board
-        hits.append((x, y))
         return True
     else:
         player_board[x][y] = 'M'  # Mark as miss on the player's board
@@ -230,15 +224,11 @@ def generate_game():
 
 
 def is_valid_game(game):
-    # check each boat pair for separation and add constraints based on if it is a valid game or not
+    # Check each pair of boats for separation
     for i in range(len(game.boats)):
         for j in range(i + 1, len(game.boats)):
-            boat1 = game.boats[i]
-            boat2 = game.boats[j]
-            # Check if boats are separated
-            if not boats_are_separated(boat1, boat2):
+            if not boats_are_separated(game.boats[i], game.boats[j]):
                 return False
-
     return True
 
 
@@ -253,14 +243,15 @@ def boats_are_separated(boat1, boat2):
 def count_boat_occupancy(solutions):
     occupancy_count = [[0 for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
-    try:
-        for game, is_valid in solutions.items():
-            if hasattr(game, 'boats') and is_valid:
-                for boat in game.boats:
-                    for x, y in boat.coords:
-                        occupancy_count[x][y] += 1
-    except AttributeError:
-        pass
+    if solutions is None:
+        return occupancy_count  # Return empty or default occupancy count
+
+    for sol in solutions:
+        if hasattr(sol, 'boats') and sol:
+            for boat in sol.boats:
+                for coord in boat.coords:
+                    x, y = coord
+                    occupancy_count[x][y] += 1
 
     return occupancy_count
 
@@ -288,43 +279,34 @@ def print_board(board_status):
 
 def build_theory():
     E._custom_constraints.clear()
+    valid_games = []
+
+    # First, find all valid games (with separated boats)
+    all_valid = 0
     for game in all_games:
-        valid_game = True
+        if is_valid_game(game):
+            all_valid += 1
+            valid_games.append(game)
+    print(all_valid)
+    for x, y, is_hit in guesses:
+        invalid_games = 0
+        for game in valid_games:
+            boat_at_guess = any(coord == (x, y) for boat in game.boats for coord in boat.coords)
+            if (is_hit and not boat_at_guess) or (not is_hit and boat_at_guess):
+                invalid_games += 1
+                valid_games.remove(game)
+                # E.add_constraint(~Game(game.boats))
 
-        # Check each pair of boats in a game for separation
-        for i in range(len(game.boats)):
-            for j in range(i + 1, len(game.boats)):
-                boat1 = game.boats[i]
-                boat2 = game.boats[j]
-                if not boats_are_separated(boat1, boat2):
-                    valid_game = False
-                    break
-            if not valid_game:
-                break
+        print(f"Guess at ({x},{y}), Hit: {is_hit}, Invalidated Games: {invalid_games}")
 
-        # If the game is valid, add it as a constraint
-        if valid_game:
-            E.add_constraint(Game(game.boats))
-    
-    for i in range(BOARD_SIZE):
-        for j in range(BOARD_SIZE):
-            if (i,j) in hits:
-                E.add_constraint(Hit((i,j)))
-            else:
-                E.add_constraint(~Hit((i,j)))
-        
-    # for boat in game.boats:
-    #     this_coords = []
-    #     for coord in hits:
-    #         this_coords.append(Hit(coord))
-    #     E.add_constraint(And(hits) >> ~boat)
-    
+    for game in valid_games:
+        E.add_constraint(Game(game.boats))
     return E
+
 
 if __name__ == "__main__":
     board_status = generate_game()
     print_board(board_status)
-    print()
 
     player_board = [[0 for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
@@ -334,7 +316,7 @@ if __name__ == "__main__":
         T = build_theory()
         T_new = T.compile()
         new_solution = T_new.solve()
-
+        # pp.pprint(new_solution)
         # Count boat occupancy based on the solutions
         occupancy_count = count_boat_occupancy(new_solution)
         for row in occupancy_count:
@@ -349,3 +331,7 @@ if __name__ == "__main__":
         result = process_guess(board_status, player_board, x, y)
         guesses.append((x, y, result))
         print(guesses)
+
+
+
+

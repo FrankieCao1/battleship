@@ -390,12 +390,13 @@ if __name__ == "__main__":
     print("\nSatisfiable: %s" % T.satisfiable())
     # pp.pprint("   Solution: %s" % T.solve())
     satisfied = T.solve()
-    possible_games = []
-    for boat1 in all_boats_5:
-        for boat2 in all_boats_4:
-            for boat3 in all_boats_3:
-                if satisfied[Game((boat1,boat2,boat3))]:
-                    possible_games.append(Game((boat1,boat2,boat3)))
+    pp.pprint(satisfied)
+    # possible_games = []
+    # for boat1 in all_boats_5:
+    #     for boat2 in all_boats_4:
+    #         for boat3 in all_boats_3:
+    #             if satisfied[Game((boat1,boat2,boat3))]:
+    #                 possible_games.append(Game((boat1,boat2,boat3)))
 
     # possibility_board = initialize_board(possible_games)
     # for line in possibility_board:
@@ -404,9 +405,9 @@ if __name__ == "__main__":
     #     print()
     
     # could pick a random game from possible_games **
-    game = random.choice(possible_games)
-    print(game)
-    play_game(possible_games, 0, game)
+    # game = random.choice(possible_games)
+    # print(game)
+    # play_game(possible_games, 0, game)
     # print(data)
 
 # ----------------------------------------- End of Main ----------------------------------------- 
